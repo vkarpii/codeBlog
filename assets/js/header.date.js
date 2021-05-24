@@ -1,5 +1,5 @@
 
 setInterval(() => {
     let date = new Date;
-    $('#header-date').text(+date);
-}, 100);
+    $('#header-date').text(date);
+}, 1000);
