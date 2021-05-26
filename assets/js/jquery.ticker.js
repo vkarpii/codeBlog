@@ -1,24 +1,7 @@
-/*
-    jQuery News Ticker is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2 of the License.
- 
-    jQuery News Ticker is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with jQuery News Ticker.  If not, see <http://www.gnu.org/licenses/>.
-*/
 (function($){  
 	$.fn.ticker = function(options) { 
-		// Extend our default options with those provided.
-		// Note that the first arg to extend is an empty object -
-		// this is to keep from overriding our "defaults" object.
 		var opts = $.extend({}, $.fn.ticker.defaults, options); 
 
-		// check that the passed element is actually in the DOM
 		if ($(this).length == 0) {
 			if (window.console && window.console.log) {
 				window.console.log('Element does not exist in DOM!');
@@ -29,17 +12,12 @@
 			return false;
 		}
 		
-		/* Get the id of the UL to get our news content from */
 		var newsID = '#' + $(this).attr('id');
 
-		/* Get the tag type - we will check this later to makde sure it is a UL tag */
 		var tagType = $(this).get(0).tagName; 	
 
 		return this.each(function() { 
-			// get a unique id for this ticker
 			var uniqID = getUniqID();
-			
-			/* Internal vars */
 			var settings = {				
 				position: 0,
 				time: 0,
@@ -63,18 +41,18 @@
 				}
 			};
 
-			// if we are not using a UL, display an error message and stop any further execution
+			
 			if (tagType != 'UL' && tagType != 'OL' && opts.htmlFeed === true) {
 				debugError('Cannot use <' + tagType.toLowerCase() + '> type of element for this plugin - must of type <ul> or <ol>');
 				return false;
 			}
 
-			// set the ticker direction
+			
 			opts.direction == 'rtl' ? opts.direction = 'right' : opts.direction = 'left';
 			
-			// lets go...
+			
 			initialisePage();
-			/* Function to get the size of an Object*/
+			
 			function countSize(obj) {
 			    var size = 0, key;
 			    for (key in obj) {
@@ -88,7 +66,7 @@
 				return newDate.getTime();			
 			}
 			
-			/* Function for handling debug and error messages */ 
+			
 			function debugError(obj) {
 				if (opts.debugMode) {
 					if (window.console && window.console.log) {
@@ -100,42 +78,42 @@
 				}
 			}
 
-			/* Function to setup the page */
+			
 			function initialisePage() {
-				// process the content for this ticker
+				
 				processContent();
 				
-				// add our HTML structure for the ticker to the DOM
+				
 				$(newsID).wrap('<div id="' + settings.dom.wrapperID.replace('#', '') + '"></div>');
 				
-				// remove any current content inside this ticker
+				
 				$(settings.dom.wrapperID).children().remove();
 				
 				$(settings.dom.wrapperID).append('<div id="' + settings.dom.tickerID.replace('#', '') + '" class="ticker"><div id="' + settings.dom.titleID.replace('#', '') + '" class="ticker-title"><span><!-- --></span></div><p id="' + settings.dom.contentID.replace('#', '') + '" class="ticker-content"></p><div id="' + settings.dom.revealID.replace('#', '') + '" class="ticker-swipe"><span><!-- --></span></div></div>');
 				$(settings.dom.wrapperID).removeClass('no-js').addClass('ticker-wrapper has-js ' + opts.direction);
-				// hide the ticker
+				
 				$(settings.dom.tickerElem + ',' + settings.dom.contentID).hide();
-				// add the controls to the DOM if required
+				
 				if (opts.controls) {
-					// add related events - set functions to run on given event
+					
 					$(settings.dom.controlsID).on('click mouseover mousedown mouseout mouseup', function (e) {
 						var button = e.target.id;
 						if (e.type == 'click') {	
 							switch (button) {
 								case settings.dom.prevID.replace('#', ''):
-									// show previous item
+									
 									settings.paused = true;
 									$(settings.dom.playPauseID).addClass('paused');
 									manualChangeContent('prev');
 									break;
 								case settings.dom.nextID.replace('#', ''):
-									// show next item
+									
 									settings.paused = true;
 									$(settings.dom.playPauseID).addClass('paused');
 									manualChangeContent('next');
 									break;
 								case settings.dom.playPauseID.replace('#', ''):
-									// play or pause the ticker
+									
 									if (settings.play == true) {
 										settings.paused = true;
 										$(settings.dom.playPauseID).addClass('paused');
@@ -162,11 +140,11 @@
 							$('#' + button).removeClass('over');
 						}
 					});
-					// add controls HTML to DOM
+					
 					$(settings.dom.wrapperID).append('<ul id="' + settings.dom.controlsID.replace('#', '') + '" class="ticker-controls"><li id="' + settings.dom.playPauseID.replace('#', '') + '" class="jnt-play-pause controls"><a href=""><!-- --></a></li><li id="' + settings.dom.prevID.replace('#', '') + '" class="jnt-prev controls"><a href=""><!-- --></a></li><li id="' + settings.dom.nextID.replace('#', '') + '" class="jnt-next controls"><a href=""><!-- --></a></li></ul>');
 				}
 				if (opts.displayType != 'fade') {
-                	// add mouse over on the content
+                	
                		$(settings.dom.contentID).mouseover(function () {
                			if (settings.paused == false) {
                				pauseTicker();
@@ -177,17 +155,17 @@
                			}
                		});
 				}
-				// we may have to wait for the ajax call to finish here
+				
 				if (!opts.ajaxFeed) {
 					setupContentAndTriggerDisplay();
 				}
 			}
 
-			/* Start to process the content for this ticker */
+			
 			function processContent() {
-				// check to see if we need to load content
+				
 				if (settings.contentLoaded == false) {
-					// construct content
+					
 					if (opts.ajaxFeed) {
 						if (opts.feedType == 'xml') {							
 							$.ajax({
@@ -197,7 +175,7 @@
 								async: true,
 								success: function(data){
 									count = 0;	
-									// get the 'root' node
+									
 									for (var a = 0; a < data.childNodes.length; a++) {
 										if (data.childNodes[a].nodeName == 'rss') {
 											xmlContent = data.childNodes[a];
