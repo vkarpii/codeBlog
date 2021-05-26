@@ -1,0 +1,269 @@
+<!doctype html>
+<html class="no-js" lang="zxx">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+         <title>article</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="manifest" href="site.webmanifest">
+		<link rel="shortcut icon" type="image/x-icon" href="assets/img/icon_n.png">
+
+		<!-- CSS here -->
+            <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+            <link rel="stylesheet" href="assets/css/owl.carousel.min.css">
+            <link rel="stylesheet" href="assets/css/ticker-style.css">
+            <link rel="stylesheet" href="assets/css/flaticon.css">
+            <link rel="stylesheet" href="assets/css/slicknav.css">
+            <link rel="stylesheet" href="assets/css/animate.min.css">
+            <link rel="stylesheet" href="assets/css/magnific-popup.css">
+            <link rel="stylesheet" href="assets/css/fontawesome-all.min.css">
+            <link rel="stylesheet" href="assets/css/themify-icons.css">
+            <link rel="stylesheet" href="assets/css/slick.css">
+            <link rel="stylesheet" href="assets/css/nice-select.css">
+            <link rel="stylesheet" href="assets/css/style.css">
+            <link rel="stylesheet" href="assets/css/responsive.css">
+   </head>
+
+   <body>
+       
+    <!-- Preloader Start -->
+    <div id="preloader-active">
+        <div class="preloader d-flex align-items-center justify-content-center">
+            <div class="preloader-inner position-relative">
+                <div class="preloader-circle"></div>
+                <div class="preloader-img pere-text">
+                    <img src="assets/img/logo/logo_CODE2.png" alt="">
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Preloader Start -->
+    <div data-include="header"></div>
+    <main>
+        <div class="post__wrapper">
+
+            <div class="container">
+              <br>
+              <div class="post__wrapper">
+                
+                <h1 class="post__title post__title_full">
+                  <span class="post__title-text">Breaking down the fundamentals of C #: allocating memory for a reference type on the stack</span>
+                </h1>
+            
+                  <div class="post__translatation">
+                    <a href="https://habr.com/ru/post/428676/" class="post__translatation-link" title="Original author: Pavel Romash" target="_blank">Original author: Pavel Romash</a>
+                  </div>
+            
+                
+                <div class="post__body post__body_full">
+                  <div class="post__text post__text-html post__text_v1" id="post-content-body">This article will show you the basics of types internals, as of course an example in which the memory for the reference type will be allocated completely on the stack (this is because I am a full-stack programmer).<br>
+            <br>
+            <img src="https://habrastorage.org/webt/xn/xh/rl/xnxhrlrmdifxe8o2pwopy-y-xhw.jpeg"><br>
+            <br>
+            <h3>Disclaimer</h3><br>
+            This article does not contain material that should be used in real projects. It is simply an extension of the boundaries in which a programming language is perceived.<br>
+            <br>
+            Before proceeding with the story, I strongly recommend you to read the first post about <a href="https://habr.com/en/post/446478/">StructLayout</a>, because there is an example that will be used in this article (However, as always).<br>
+            <a name="habracut"></a><br>
+            <h3>Prehistory</h3><br>
+            Starting to write code for this article, I wanted to do something interesting using assembly language. I wanted to somehow break the standard execution model and get a really unusual result. And remembering how often people say that the reference type differs from the value types in that the first ones are located on the heap and the second ones are on the stack, I decided to use an assembler to show that the reference type can live on the stack. However, I began to run into all sorts of problems, for example, returning the address and its presentation as a managed link (I am still working on it). So I started to cheat and do something that does not work in assembly language, in C #. And in the end, there was no assembler at all.<br>
+            Also read recommendation — if you are familiar with the layout of reference types, I recommend skipping the theory about them (only the basics will be given, nothing interesting).<br>
+            <br>
+            <h3>A little about the types' internals(for old framework, now some offsets are changed, but overall schema is the same)</h3><br>
+            I would like to remind that the division of memory into a stack and a heap occurs at the .NET level, and this division is purely logical; there is physically no difference between the memory areas under the heap and the stack. The difference in productivity is provided only by different algorithms of working with these two areas.<br>
+            <br>
+            Then, how to allocate memory on the stack? To begin with, let's understand how this mysterious reference type is arranged and what it has, that value type doesn't have.<br>
+            <br>
+            So, consider the simplest example with the class Employee.<br>
+            <br>
+            <div class="spoiler"><b class="spoiler_title">Code Employee</b><div class="spoiler_text"><pre><code class="plaintext hljs">public class Employee 
+            {
+                private int _id;
+                private string _name;
+            
+                public virtual void Work() 
+                {        
+                        Console.WriteLine(“Zzzz...”);
+                }
+            
+                public void TakeVacation(int days) 
+                {
+                        Console.WriteLine(“Zzzz...”);
+                }
+            
+                public static void SetCompanyPolicy(CompanyPolicy policy)
+                {       
+                         Console.WriteLine("Zzzz...");
+                }
+             } 
+            </code></pre><br>
+            </div></div><br>
+            And lets take a look at how it is presented in memory.<br>
+            This class is considered on the example of a 32-bit system.<br>
+            <br>
+            <img src="https://habrastorage.org/webt/vr/p9/pz/vrp9pzrp7gclrthnistslmvxnfg.png"><br>
+            <br>
+            Thus, in addition to the memory for the fields, we have two more hidden fields — the index of the synchronization block (object header word title in the picture) and the address of the method table.<br>
+            <br>
+            The first field (the synchronization block index) does not really interest us. When placing the type I decided to skip it. I did this for two reasons:<br>
+            <br>
+            <ol>
+            <li> I am very lazy (I did not say that the reasons will be reasonable)</li>
+            <li> For the basic operation of the object, this field is not required.</li>
+            </ol><br>
+            But since we have already started talking, I think it is right to say a few words about this field. It is used for different purposes (hash code, synchronization). Rather, the field itself is simply an index of one of the synchronization blocks associated with the given object. Blocks themselves are located in the table of synchronization blocks (something like global array). Creating such a block is a rather large operation, so it is not created if it is not needed. Moreover, when using thin locks, the identifier of the thread that received the lock (instead of the index) will be written there.<br>
+            <br>
+            The second field is much more important for us. Thanks to the table of type methods, such a powerful tool as polymorphism is possible (which, by the way, structures, stack kings, do not possess). <br>
+            Suppose that the Employee class additionally implements three interfaces: IComparable, IDisposable, and ICloneable.<br>
+            <br>
+            Then the table of methods will look something like this.<br>
+            <br>
+            <img src="https://habrastorage.org/webt/x3/e9/wn/x3e9wne2jnil20fke6-gj2ovdv4.png"><br>
+            <br>
+            The picture is very cool, everything is shown and everything is clear. To sum up, the virtual method is not called directly by address, but by the offset in the method table. In the hierarchy, the same virtual methods will be located at the same offset in the method table. That is, on the base class we call the method by offset, not knowing which type of method table will be used, but knowing that this offset will be the most relevant method for the type of runtime.<br>
+            <br>
+            Also it is worth remembering that the object reference points just to the method table pointer.<br>
+            <br>
+            <h3>Long-awaited example</h3><br>
+            Let's start with classes that will help us in our goal. Using StructLayout (I really tried without it, but it didn't work out), I wrote simple mappers — pointers to managed types and back. Getting a pointer from a managed link is pretty easy, but the inverse transformation caused me difficulties and, without thinking twice, I applied my favorite attribute. To keep the code in one key, made in 2 directions in one way.<br>
+            <br>
+            <div class="spoiler"><b class="spoiler_title">Code of the mappers</b><div class="spoiler_text"><pre><code class="plaintext hljs">// Provides the signatures we need
+            public class PointerCasterFacade 
+            {
+                public virtual unsafe T GetManagedReferenceByPointer&lt;T&gt;(int* pointer) =&gt; default(T);
+                public virtual unsafe int* GetPointerByManagedReference&lt;T&gt;(T managedReference) =&gt; (int*)0;
+            }
+            // Provides the logic we need
+            public class PointerCasterUnderground
+            {
+                public virtual T GetManagedReferenceByPointer&lt;T&gt;(T reference) =&gt; reference;
+                public virtual unsafe int* GetPointerByManagedReference&lt;T&gt;(int* pointer) =&gt; pointer;
+            }
+            
+            [StructLayout(LayoutKind.Explicit)]
+            public class PointerCaster
+            {
+                public PointerCaster()
+                {
+                    pointerCaster= new PointerCasterUnderground();
+                }
+            
+                [FieldOffset(0)]
+                private PointerCasterUnderground pointerCaster;
+            
+                [FieldOffset(0)]
+                public PointerCasterFacade Caster;
+            }
+            </code></pre><br>
+            </div></div><br>
+            <br>
+            First, we write a method that takes a pointer to some memory (not necessarily on the stack, by the way) and configures the type.<br>
+            <br>
+            For the simplicity of finding the address of the method table, I create a type on the heap. I am sure that the table of methods can be found in other ways, but I did not set myself the goal of optimizing this code, it was more interesting for me to make it understandable. Further, using the previously described converters, we obtain a pointer to the type created.<br>
+            <br>
+            This pointer points exactly to the method table. Therefore, it is sufficient to simply obtain the contents from the memory it points to. This will be the address of the method table.<br>
+            And since the pointer passed to us is a kind of object reference, we must also write the address of the method table exactly where it points.<br>
+            <br>
+            Actually, that's all. Suddenly, right? Now our type is ready. Pinocchio, who allocated memory to us, will take care of initializing the fields himself.<br>
+            <br>
+            It remains only to use our ultra-mega caster to convert the pointer into a managed link.<br>
+            <pre><code class="plaintext hljs">public class StackInitializer
+            {
+                public static unsafe T InitializeOnStack&lt;T&gt;(int* pointer) where T : new()
+                {
+                    T r = new T();
+                    var caster = new PointerCaster().Caster;
+                    int* ptr = caster.GetPointerByManagedReference(r);
+                    pointer[0] = ptr[0];
+                    T reference = caster.GetManagedReferenceByPointer&lt;T&gt;(pointer);
+                    return reference;
+                }
+            }
+            </code></pre><br>
+            Now we have a link on the stack that points to the same stack, where according to all the laws of reference types (well, almost) lies an object constructed from black earth and sticks. Polymorphism is available.<br>
+            <br>
+            It should be understood that if you pass this link outside the method, then after returning from it, we will get something unclear. About calls of virtual methods and speech can not be, the exception will occur. Normal methods are called directly, the code will just have addresses for real methods, so they will work. And in place of the fields will be… and no one knows what will be there.<br>
+            <br>
+            Since it is impossible to use a separate method for initialization on the stack (since the stack frame will be overwritten after returning from the method), the method that wants to apply the type on the stack must allocate memory. Strictly speaking, there are some ways to do it. But the most suitable for us is <b>stackalloc</b>. Just the perfect keyword for our purposes. Unfortunately, it brings the <i>unsafe</i> in the code. Before that, there was an idea to use Span for these purposes and to do without unsafe code. In the unsafe code there is nothing bad, but like everywhere, it is not a silver bullet and has its own areas of application.<br>
+            <br>
+            Then, after receiving the pointer to the memory on the current stack, we pass this pointer to the method that makes up the type in parts. That's all who listened — well done.<br>
+            <br>
+            <pre><code class="plaintext hljs">unsafe class Program
+            {
+                public static void Main()
+                {
+                    int* pointer = stackalloc int[2];
+                    var a = StackInitializer.InitializeOnStack&lt;StackReferenceType&gt;(pointer);
+            
+                    a.StubMethod();
+                    Console.WriteLine(a.Field);
+                    Console.WriteLine(a);
+                    Console.Read();
+                }
+            }
+            </code></pre><br>
+            You should not use it in real projects, the method allocating memory on the stack uses new T (), which in turn uses reflection to create a type on the heap! So this method will be slower than the usual creation of the type of times well, in 40-50. Moreover it is not cross platform. <br>
+            <br>
+            <a href="https://github.com/ZloyChert/Romash.ReferenceTypesInStack">Here</a> you can find whole project.<br>
+            <br>
+            Source: in the theoretical guide, examples from the book Sasha Goldstein — Pro .NET Performace were used</div>
+                  
+                </div>
+            
+              </div>
+          </div>
+        </div>
+    </main>
+    <div data-include="footer"></div>
+   
+	<!-- JS here -->
+	
+		<!-- All JS Custom Plugins Link Here here -->
+        <script src="./assets/js/vendor/modernizr-3.5.0.min.js"></script>
+		<!-- Jquery, Popper, Bootstrap -->
+		<script src="./assets/js/vendor/jquery-1.12.4.min.js"></script>
+        <script src="./assets/js/popper.min.js"></script>
+        <script src="./assets/js/bootstrap.min.js"></script>
+	    <!-- Jquery Mobile Menu -->
+        <script src="./assets/js/jquery.slicknav.min.js"></script>
+
+		<!-- Jquery Slick , Owl-Carousel Plugins -->
+        <script src="./assets/js/owl.carousel.min.js"></script>
+        <script src="./assets/js/slick.min.js"></script>
+        <!-- Date Picker -->
+        <script src="./assets/js/gijgo.min.js"></script>
+		<!-- One Page, Animated-HeadLin -->
+        <script src="./assets/js/wow.min.js"></script>
+		<script src="./assets/js/animated.headline.js"></script>
+        <script src="./assets/js/jquery.magnific-popup.js"></script>
+
+        <!-- Breaking New Pluging -->
+        <script src="./assets/js/jquery.ticker.js"></script>
+        <script src="./assets/js/site.js"></script>
+
+		<!-- Scrollup, nice-select, sticky -->
+        <script src="./assets/js/jquery.scrollUp.min.js"></script>
+        <script src="./assets/js/jquery.nice-select.min.js"></script>
+		<script src="./assets/js/jquery.sticky.js"></script>
+        
+        <!-- contact js -->
+        <script src="./assets/js/contact.js"></script>
+        <script src="./assets/js/jquery.form.js"></script>
+        <script src="./assets/js/jquery.validate.min.js"></script>
+        <script src="./assets/js/mail-script.js"></script>
+        <script src="./assets/js/jquery.ajaxchimp.min.js"></script>
+        
+		<!-- Jquery Plugins, main Jquery -->	
+        <script src="./assets/js/plugins.js"></script>
+        <script src="./assets/js/main.js"></script>
+        
+        <!-- Header Date -->
+        <script src="./assets/js/header.date.js"></script>
+        <!-- Weather API-->
+        <script src="./assets/js/weatherapi.js"></script>
+        <script src="./assets/js/include.js"></script>
+        
+    </body>
+</html>

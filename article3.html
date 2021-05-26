@@ -1,0 +1,285 @@
+<!doctype html>
+<html class="no-js" lang="zxx">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+         <title>article </title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="manifest" href="site.webmanifest">
+		<link rel="shortcut icon" type="image/x-icon" href="assets/img/icon_n.png">
+
+		<!-- CSS here -->
+            <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+            <link rel="stylesheet" href="assets/css/owl.carousel.min.css">
+            <link rel="stylesheet" href="assets/css/ticker-style.css">
+            <link rel="stylesheet" href="assets/css/flaticon.css">
+            <link rel="stylesheet" href="assets/css/slicknav.css">
+            <link rel="stylesheet" href="assets/css/animate.min.css">
+            <link rel="stylesheet" href="assets/css/magnific-popup.css">
+            <link rel="stylesheet" href="assets/css/fontawesome-all.min.css">
+            <link rel="stylesheet" href="assets/css/themify-icons.css">
+            <link rel="stylesheet" href="assets/css/slick.css">
+            <link rel="stylesheet" href="assets/css/nice-select.css">
+            <link rel="stylesheet" href="assets/css/style.css">
+            <link rel="stylesheet" href="assets/css/responsive.css">
+   </head>
+
+   <body>
+       
+    <!-- Preloader Start -->
+    <div id="preloader-active">
+        <div class="preloader d-flex align-items-center justify-content-center">
+            <div class="preloader-inner position-relative">
+                <div class="preloader-circle"></div>
+                <div class="preloader-img pere-text">
+                    <img src="assets/img/logo/logo_CODE2.png" alt="">
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Preloader Start -->
+    <div data-include="header"></div>
+    <main>
+        <div class="post__wrapper">
+
+            <div class="container">
+                <div class="post__wrapper">
+                  <br>
+                
+                    <h1 class="post__title post__title_full">
+                      <span class="post__title-text">DynamicData: Dynamic Collections, the MVVM Architecture, and Reactive Extensions</span>
+                    </h1>
+                
+                      <div class="post__translatation">
+                        <a href="https://habr.com/ru/post/445098/" class="post__translatation-link" title="Original author: @worldbeater" target="_blank" rel=" noopener">Original author: @worldbeater</a>
+                      </div>
+                
+                     
+                    <div class="post__body post__body_full">
+                      <div class="post__text post__text-html post__text_v1" id="post-content-body"><br>
+                <p><br>
+                February 2019 marked the release of <a href="https://reactiveui.net/" rel="nofollow">ReactiveUI 9</a> — the cross-platform framework for building GUI applications on the Microsoft .NET platform. ReactiveUI is a tool for tight integration of reactive extensions with the MVVM design pattern. You could familiarize yourself with the framework via <a href="https://reactiveui.net/docs/resources/videos" rel="nofollow">a series of videos</a> or <a href="https://reactiveui.net/docs/getting-started/" rel="nofollow">the welcome page of the documentation</a>. The ReactiveUI 9 update includes <a href="https://github.com/reactiveui/ReactiveUI/releases" rel="nofollow">numerous fixes and improvements</a>, but probably the most crucial and interesting one is <a href="https://reactiveui.net/docs/handbook/collections/" rel="nofollow">integration with the DynamicData framework</a>, allowing you to work with dynamic collections in Reactive fashion. Let’s find out what we can use <a href="https://github.com/RolandPheasant/DynamicData" rel="nofollow">DynamicData</a> for and how this powerful reactive framework works under the hood!</p><a name="habracut"></a><br>
+                <h1 id="introduction">Introduction</h1><br>
+                <p>Let’s first determine the use cases for DynamicData and find out what we don’t like about the default tools for working with dynamic datasets from the <code>System.Collections.ObjectModel</code> namespace.</p><br>
+                <p>The MVVM template, as we know, assumes the division of responsibility between the model layer, the presentation layer and the app presentation model, also known as the view model. The model layer is represented by domain entities and services and doesn’t know anything about the view model layer. The model encapsulates the entire complex logic of the app, while the view model delegates operations to the model, providing the access to information on the current state of the app through observable properties, commands and collections, to the view. The default tool for working with dynamic properties is the <code>INotifyPropertyChanged</code> interface, for working with user actions — <code>ICommand</code>, and for working with collections — the <code>INotifyCollectionChanged</code> interface, as well as such implementations, as <code>ObservableCollection&lt;T&gt;</code> and <code>ReadOnlyObservableCollection&lt;T&gt;</code>.</p><br>
+                <img width="500" src="https://habrastorage.org/getpro/habr/post_images/504/c83/ab0/504c83ab04fe2e2d1eed037317b8aa2c.jpg"><br>
+                <p><br>
+                Implementations of the <code>INotifyPropertyChanged</code> and the <code>ICommand</code> interfaces are usually up to the developer and the used MVVM framework, but using the default <code>ObservableCollection&lt;T&gt;</code> imposes a number of limitations! For example, we can’t mutate the collection from a background thread without <code>Dispatcher.Invoke</code> or a similar call, and that would’ve been super useful for synchronizing data arrays with the server via a background operation. Worth noting, that when using the clean MVVM architecture, the model layer shouldn’t know anything about the used GUI framework, and should be compatible with the model layer in MVC or MVP terminology. That’s why those numerous <code>Dispatcher.Invoke</code> calls in domain services violate the responsibility segregation principle.</p><br>
+                <p>Of course, we could declare an event in a domain service, and transmit a chunk with changed items as event arguments, then subscribe to the event, encapsulate the <code>Dispatcher.Invoke</code> call behind an interface, so our app won’t depend on any GUI framework, call that interface from the view model and modify <code>ObservableCollection&lt;T&gt;</code> accordingly, but there’s a much more elegant way of dealing with such issues without the need to reinvent the wheel. What are we waiting for, then?</p><br>
+                <h1 id="reactive-extensions-managing-observable-data-streams">Reactive Extensions. Managing Observable Data Streams</h1><br>
+                <p>To fully understand the abstractions introduced by <a href="https://github.com/RolandPheasant/DynamicData" rel="nofollow">DynamicData</a>, and how to work with changing reactive data sets, let's recall <a href="https://habr.com/ru/post/418007/">what reactive programming is and how to use it in the context of the Microsoft .NET platform and the MVVM design pattern</a>. The way of organizing the interaction between program components can be interactive or reactive. With the interactive approach, the consumer receives data from the producer synchronously (pull-based, T, IEnumerable), and with the reactive approach, the producer pushes data to the consumer asynchronously (push-based, Task, IObservable). </p><br>
+                <img width="500" src="https://habrastorage.org/webt/mb/ts/mj/mbtsmjfyhjqeeb4tv8ynotvkdms.png"><br>
+                <p><br>
+                <a href="http://reactivex.io/" rel="nofollow">Reactive programming</a> is programming with asynchronous data streams, and reactive extensions is the reactive programming implementation, based on the <code>IObservable</code> and <code>IObserver</code> interfaces from the System namespace, defining a series of LINQ-like operations on the <code>IObservable</code> interface, known as LINQ over Observable. Reactive extensions support .NET Standard and run wherever Microsoft .NET runs. </p><br>
+                <p><a href="https://reactivex.io" rel="nofollow"><img src="https://habrastorage.org/webt/ue/qe/80/ueqe80neq0ufivj-bq5hipdrldo.gif"></a><br>
+                <br>
+                ReactiveUI offers application developers to take the advantage of using the reactive implementations for the <code>ICommand</code> and <code>INotifyPropertyChanged</code> interfaces, by providing such tools as <a href="https://reactiveui.net/docs/handbook/commands/" rel="nofollow"><code>ReactiveCommand&lt;TIn, TOut&gt;</code></a> and <a href="https://reactiveui.net/docs/handbook/when-any/" rel="nofollow"><code>WhenAnyValue</code></a>. <code>WhenAnyValue</code> allows you to convert a property of a class that implements the <code>INotifyPropertyChanged</code> interface to an event stream of type <code>IObservable&lt;T&gt;</code>, this simplifies the implementation of dependent properties.</p><br>
+                <pre><code class="cs hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title">ExampleViewModel</span> : <span class="hljs-title">ReactiveObject</span>
+                {
+                  [<span class="hljs-meta">Reactive</span>] 
+                  <span class="hljs-comment">// Attribute from the ReactiveUI.Fody package,</span>
+                  <span class="hljs-comment">// takes care of aspect-oriented INPC implementation</span>
+                  <span class="hljs-comment">// for this particular property.</span>
+                  <span class="hljs-keyword">public</span> <span class="hljs-keyword">string</span> Name { <span class="hljs-keyword">get</span>; <span class="hljs-keyword">set</span>; }
+                
+                  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">ExampleViewModel</span>(<span class="hljs-params"></span>)</span>
+                  {
+                    <span class="hljs-comment">// Here we subscribe to OnPropertyChanged("Name") events.</span>
+                    <span class="hljs-keyword">this</span>.WhenAnyValue(x =&gt; x.Name)
+                        <span class="hljs-comment">// IObservable&lt;string&gt;</span>
+                        .Subscribe(Console.WriteLine);
+                  }
+                }</code></pre><br>
+                <p><code>ReactiveCommand&lt;TIn, TOut&gt;</code> allows you to work with a command as with <code>IObservable&lt;TOut&gt;</code>, which is published whenever a command completes execution. Also, any command has a <code>ThrownExceptions</code> property of type <code>IObservable&lt;Exception&gt;</code>.</p><br>
+                <pre><code class="cs hljs"><span class="hljs-comment">// ReactiveCommand&lt;Unit, int&gt;</span>
+                <span class="hljs-keyword">var</span> command = ReactiveCommand.Create(() =&gt; <span class="hljs-number">42</span>);
+                command
+                  <span class="hljs-comment">// IObservable&lt;int&gt;</span>
+                  .Subscribe(Console.WriteLine);
+                
+                command
+                  .ThrownExceptions
+                  <span class="hljs-comment">// IObservable&lt;Exception&gt;</span>
+                  .Select(exception =&gt; exception.Message)
+                  <span class="hljs-comment">// IObservable&lt;string&gt;</span>
+                  .Subscribe(Console.WriteLine);
+                
+                command.Execute().Subscribe();
+                <span class="hljs-comment">// Outputs: 42</span></code></pre><br>
+                <p>Until this time, we’ve been working with <code>IObservable&lt;T&gt;</code>, as with an event that publishes a new value of type <code>T</code> whenever the state of the object being observed changes. Simply put, <code>IObservable&lt;T&gt;</code> is a stream of events, a collection of type <code>T</code> stretched in time. </p><br>
+                <p>Of course, we could work with collections just as easily and naturally — whenever a collection changes, we could publish a new collection with changed elements. In this case, the published value would be of type <code>IEnumerable&lt;T&gt;</code> or more specialized, and the observable stream itself would be of type <code>IObservable&lt;IEnumerable&lt;T&gt;&gt;</code>. But, as a critically-minded reader correctly notes, this is fraught with critical performance issues, especially if there are not a dozen elements in our collection, but a hundred, or even a few thousand!</p><br>
+                <h1 id="introduction-to-dynamicdata">Introduction to DynamicData</h1><br>
+                <p><a href="https://reactiveui.net/docs/handbook/collections" rel="nofollow">DynamicData</a>  is a library that allows you to use the power of reactive extensions when working with collections. Rx is extremely powerful, but out of the box provides nothing to assist with managing collections, and <a href="https://reactiveui.net/docs/handbook/collections" rel="nofollow">DynamicData</a> fixes this. In most applications, there is a need to dynamically update collections — usually, a collection is populated with items when the application starts, and then the collection is updated asynchronously, synchronizing information with a server or a database. Modern applications are quite complex, and it is often necessary to create projections of collections — filter, transform, or sort elements. DynamicData was designed to get rid of the incredibly complex code that we would need to manage dynamically changing data sets. The tool is actively developing and refining, and now more than 60 operators are supported for working with collections. </p><br>
+                <p><a href="https://github.com/RolandPheasant/TailBlazer" rel="nofollow"><img src="https://habrastorage.org/webt/hn/7j/v3/hn7jv3fv1qgfxlhqrd9g6dokkao.gif"></a><br>
+                <br>
+                <a href="https://reactiveui.net/docs/handbook/collections" rel="nofollow">DynamicData</a> is not an alternative implementation of <code>ObservableCollection&lt;T&gt;</code>. DynamicData’s architecture is based primarily on domain-driven programming concepts. The ideology of use is based on the fact that you control a certain data source, a collection to which the code responsible for synchronizing and mutating data has access. Next, you apply a series of operators to the data source, with the help of those operators you can declaratively transform the data without the need to manually create and modify other collections. In fact, with DynamicData you separate read and write operations, and you can only read in a reactive way — therefore, the inherited collections will always stay synchronized with the source. </p><br>
+                <p>Instead of the classic <code>IObservable&lt;T&gt;</code>, DynamicData defines operations on <code>IObservable&lt;IChangeSet&lt;T&gt;&gt;</code> and <code>IObservable&lt;IChangeSet&lt;TValue, TKey&gt;&gt;</code>, where <code>IChangeSet</code> is a chunk containing information about the change of the collection, including the type of change and the affected elements. This approach can significantly improve performance of the code for working with collections, written in a reactive manner. You can always transform <code>IObservable&lt;IChangeSet&lt;T&gt;&gt;</code> into <code>IObservable&lt;IEnumerable&lt;T&gt;&gt;</code>, if it becomes necessary to access all elements of a collection at once. If this sounds difficult — don’t worry, the code examples below will make everything clear!</p><br>
+                <h1 id="dynamicdata-in-action">DynamicData in Action</h1><br>
+                <p>Let's look at a number of examples in order to better understand how DynamicData works, how it differs from <code>System.Reactive</code> and what tasks ordinary developers of GUI software it can help solve. Let's start with <a href="https://github.com/RolandPheasant/DynamicData" rel="nofollow">a comprehensive example published on GitHub</a>. In this example, the data source is <code>SourceCache&lt;Trade, long&gt;</code> containing a collection of transactions. The goal is to show only active transactions, transform models into proxy objects, sort the collection.</p><br>
+                <pre><code class="cs hljs"><span class="hljs-comment">// The default collection from the System.Collections.ObjectModel</span>
+                <span class="hljs-comment">// namespace, to which we bind XAML UI controls.</span>
+                ReadOnlyObservableCollection&lt;TradeProxy&gt; list;
+                
+                <span class="hljs-comment">// The mutable data source, containing the list of transactions.</span>
+                <span class="hljs-comment">// We can use Add, Remove, Insert and similar methods on it.</span>
+                <span class="hljs-keyword">var</span> source = <span class="hljs-keyword">new</span> SourceCache&lt;Trade, <span class="hljs-keyword">long</span>&gt;(trade =&gt; trade.Id);
+                
+                <span class="hljs-keyword">var</span> cancellation = source
+                  <span class="hljs-comment">// Here we transform the data source to an observable change set.</span>
+                  .Connect()
+                  <span class="hljs-comment">// Now we have IObservable&lt;IChangeSet&lt;Trade, long&gt;&gt; here.</span>
+                  <span class="hljs-comment">// Filter only active transactions.</span>
+                  .Filter(trade =&gt; trade.Status == TradeStatus.Live) 
+                  <span class="hljs-comment">// Transform the models into proxy objects.</span>
+                  .Transform(trade =&gt; <span class="hljs-keyword">new</span> TradeProxy(trade))
+                  <span class="hljs-comment">// No we have IObservable&lt;IChangeSet&lt;TrandeProxy, long&gt;&gt;</span>
+                  <span class="hljs-comment">// Order the trade proxies by timestamp.</span>
+                  .Sort(SortExpressionComparer&lt;TradeProxy&gt;
+                    .Descending(trade =&gt; trade.Timestamp))
+                  <span class="hljs-comment">// Use the dispatcher scheduler to update the GUI. </span>
+                  .ObserveOnDispatcher()
+                  <span class="hljs-comment">// Bind the sorted objects to the collection from the</span>
+                  <span class="hljs-comment">// System.Collections.ObjectModel namespace.</span>
+                  .Bind(<span class="hljs-keyword">out</span> list) 
+                  <span class="hljs-comment">// Ensure that when deleting elements from the</span>
+                  <span class="hljs-comment">// collections, the resources will get disposed.</span>
+                  .DisposeMany()
+                  .Subscribe();</code></pre><br>
+                <p>In the example above, when changing <code>SourceCache</code> that is the source of the data, <code>ReadOnlyObservableCollection</code> also changes accordingly. At the same time, when removing items from the collection, the <code>Dispose</code> method will get called, the collection will always be updated only from the GUI thread and will remain sorted and filtered. Cool, now we have no <code>Dispatcher.Invoke</code> calls and the code is simple and readable!</p><br>
+                <h1 id="data-sources-sourcelist-and-sourcecache">Data Sources. SourceList and SourceCache</h1><br>
+                <p><a href="https://github.com/RolandPheasant/DynamicData" rel="nofollow">DynamicData</a> provides two specialized collections that can be used as a mutable data source. These collections are <code>SourceList&lt;TObject&gt;</code> and <code>SourceCache&lt;TObject, TKey&gt;</code>. It is recommended to use <code>SourceCache</code> whenever <code>TObject</code> has a unique key, otherwise use <code>SourceList</code>. These objects provide the familiar for .NET developers API for collection management — such methods, as <code>Add</code>, <code>Remove</code>, <code>Insert</code>. To convert data sources to <code>IObservable&lt;IChangeSet&lt;T&gt;&gt;</code> or to <code>IObservable&lt;IChangeSet&lt;T, TKey&gt;&gt;</code>, use the <code>.Connect()</code> operator. For example, if you have a service that periodically updates a collection of items in the background, you can easily synchronize the list of these items with the GUI, without the <code>Dispatcher.Invoke</code> and similar boilerplate code:</p><br>
+                <pre><code class="cs hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title">BackgroundService</span> : <span class="hljs-title">IBackgroundService</span>
+                {
+                  <span class="hljs-comment">// Declare the mutable data source containing trades.</span>
+                  <span class="hljs-keyword">private</span> <span class="hljs-keyword">readonly</span> SourceList&lt;Trade&gt; _trades;
+                
+                  <span class="hljs-comment">// Expose the observable change set to the outside world.</span>
+                  <span class="hljs-comment">// If we have more than one subscriber, it is recommended</span>
+                  <span class="hljs-comment">// to use the Publish() operator from reactive extensions.</span>
+                  <span class="hljs-keyword">public</span> IObservable&lt;IChangeSet&lt;Trade&gt;&gt; Connect() =&gt; _trades.Connect();
+                
+                  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">BackgroundService</span>(<span class="hljs-params"></span>)</span>
+                  {
+                    _trades = <span class="hljs-keyword">new</span> SourceList&lt;Trade&gt;();
+                    _trades.Add(<span class="hljs-keyword">new</span> Trade());
+                    <span class="hljs-comment">// Mutate the source list!</span>
+                    <span class="hljs-comment">// Even from the background thread.</span>
+                  }
+                }</code></pre><br>
+                <p>With the help of the powerful DynamicData operators, we can transform <code>IObservable&lt;IChangeSet&lt;Trade&gt;&gt;</code> into <code>ReadOnlyObservableCollection</code> declared in our view model.</p><br>
+                <pre><code class="cs hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title">TradesViewModel</span> : <span class="hljs-title">ReactiveObject</span>
+                { 
+                  <span class="hljs-keyword">private</span> <span class="hljs-keyword">readonly</span> ReadOnlyObservableCollection&lt;TradeVm&gt; _trades;
+                  <span class="hljs-keyword">public</span> ReadOnlyObservableCollection&lt;TradeVm&gt; Trades =&gt; _trades;
+                
+                  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">TradesViewModel</span>(<span class="hljs-params">IBackgroundService background</span>)</span>
+                  {
+                    <span class="hljs-comment">// Connect to the data source, transform elements, bind</span>
+                    <span class="hljs-comment">// them to the read-only observable collection.</span>
+                    background.Connect()
+                      .Transform(x =&gt; <span class="hljs-keyword">new</span> TradeVm(x))
+                      .ObserveOn(RxApp.MainThreadScheduler)
+                      .Bind(<span class="hljs-keyword">out</span> _trades)
+                      .DisposeMany()
+                      .Subscribe();
+                  }
+                }</code></pre><br>
+                <p>In addition to <code>Transform</code>, <code>Filter</code> and <code>Sort</code> operators, DynamicData supports grouping, logical operations, collection flattening, the use of aggregate functions, the elimination of identical elements, element counting, and even virtualization at the view model level. You can read more about all the operators in <a href="https://github.com/RolandPheasant/DynamicData/blob/master/README.md" rel="nofollow">the project's README on GitHub</a>.</p><br>
+                <p><a href="https://github.com/reactiveui/dynamicdata" rel="nofollow"><img src="https://habrastorage.org/webt/jy/6-/4a/jy6-4azw__6rou9alucffpjhkrq.gif"></a><br>
+                <br>
+                Aside from <code>SourceList</code> and <code>SourceCache</code>, the DynamicData library includes a single-threaded mutable collection implementation — <code>ObservableCollectionExtended</code>. To synchronize two collections in your view model, declare one of them as <code>ObservableCollectionExtended</code>, and the other as <code>ReadOnlyObservableCollection</code>, and then use the <code>ToObservableChangeSet</code> operator, that does almost the same thing as Connect, but is intended to work with <code>ObservableCollection</code>.</p><br>
+                <pre><code class="cs hljs"><span class="hljs-comment">// Declare the derived collection.</span>
+                ReadOnlyObservableCollection&lt;TradeVm&gt; _derived;
+                
+                <span class="hljs-comment">// Declare and initialize the source collection.</span>
+                <span class="hljs-keyword">var</span> source = <span class="hljs-keyword">new</span> ObservableCollectionExtended&lt;Trade&gt;();
+                source.ToObservableChangeSet(trade =&gt; trade.Key)
+                  .Transform(trade =&gt; <span class="hljs-keyword">new</span> TradeProxy(trade))
+                  .Filter(proxy =&gt; proxy.IsChecked)
+                  .Bind(<span class="hljs-keyword">out</span> _derived)
+                  .Subscribe();</code></pre><br>
+                <p>DynamicData also supports change tracking in classes that implement the <code>INotifyPropertyChanged</code> interface. For example, if you would like to receive notifications each time a property changes, use the <code>AutoRefresh</code> operator and pass in the required property selector. <code>AutoRefresh</code> and other DynamicData operators can allow you to effortlessly validate a giant number of forms and nested forms displayed on the screen!</p><br>
+                <pre><code class="cs hljs"><span class="hljs-comment">// IObservable&lt;bool&gt;</span>
+                <span class="hljs-keyword">var</span> isValid = databases
+                  .ToObservableChangeSet()
+                  <span class="hljs-comment">// Subscribe only to IsValid property changes.</span>
+                  .AutoRefresh(database =&gt; database.IsValid) 
+                  <span class="hljs-comment">// Materialize the collection.</span>
+                  .ToCollection()
+                  <span class="hljs-comment">// Determine if all forms are valid.</span>
+                  .Select(x =&gt; x.All(y =&gt; y.IsValid));
+                
+                <span class="hljs-comment">// If ReactiveUI is used, you can transform the</span>
+                <span class="hljs-comment">// IObservable&lt;bool&gt; variable to a property declared</span>
+                <span class="hljs-comment">// as ObservableAsPropertyHelper&lt;bool&gt;, e.g. IsValid.</span>
+                _isValid = isValid
+                  .ObserveOn(RxApp.MainThreadScheduler)
+                  .ToProperty(<span class="hljs-keyword">this</span>, x =&gt; x.IsValid);</code></pre><br>
+                <p>You can create complex UIs using DynamicData functionality, and it’s especially relevant for systems displaying a large amount of data in real time, like instant messaging apps and monitoring systems.</p><br>
+                <p><a href="https://github.com/RolandPheasant/DynamicData.Snippets" rel="nofollow"><img src="https://habrastorage.org/webt/98/nh/ws/98nhws7gl4yzk8kgcovbpvvozoi.gif"></a><br>
+                <br>
+                </p><br>
+                <h1 id="conclusion">Conclusion</h1><br>
+                <p><a href="https://github.com/dotnet/reactive" rel="nofollow">ReactiveX</a> is a powerful tool allowing you to work with event streams and with the UI, write portable and maintainable code and solve complex tasks in a simple and elegant way. <a href="https://reactiveui.net/" rel="nofollow">ReactiveUI</a> allows .NET developers to integrate reactive extensions into their projects using the MVVM architecture with reactive implementations of <code>INotifyPropertyChanged</code> and <code>ICommand</code>, while DynamicData takes care of collection management by implementing <a href="https://reactiveui.net/docs/handbook/collections/" rel="nofollow"><code>INotifyCollectionChanged</code></a>, expanding the capabilities of reactive extensions with the focus on performance.</p><br>
+                <p>ReactiveUI and DynamicData libraries are fully compatible with all GUI frameworks on the .NET platform, including Windows Presentation Foundation, Universal Windows Platform, <a href="https://github.com/AvaloniaUI/Avalonia" rel="nofollow">Avalonia</a>, Xamarin.Android, Xamarin Forms and Xamarin iOS. You could start studying DynamicData on <a href="https://reactiveui.net/docs/handbook/collections/" rel="nofollow">the corresponding page of the ReactiveUI documentation</a>. Also take care to familiarize yourself with the <a href="https://github.com/RolandPheasant/DynamicData.Snippets" rel="nofollow">DynamicData Snippets</a> project, containing code samples for almost everything you might need.</p></div>
+                      
+                    </div>
+           
+                  </div>
+        
+          </div>
+        </div>
+    </main>
+    <div data-include="footer"></div>
+   
+	<!-- JS here -->
+	
+		<!-- All JS Custom Plugins Link Here here -->
+        <script src="./assets/js/vendor/modernizr-3.5.0.min.js"></script>
+		<!-- Jquery, Popper, Bootstrap -->
+		<script src="./assets/js/vendor/jquery-1.12.4.min.js"></script>
+        <script src="./assets/js/popper.min.js"></script>
+        <script src="./assets/js/bootstrap.min.js"></script>
+	    <!-- Jquery Mobile Menu -->
+        <script src="./assets/js/jquery.slicknav.min.js"></script>
+
+		<!-- Jquery Slick , Owl-Carousel Plugins -->
+        <script src="./assets/js/owl.carousel.min.js"></script>
+        <script src="./assets/js/slick.min.js"></script>
+        <!-- Date Picker -->
+        <script src="./assets/js/gijgo.min.js"></script>
+		<!-- One Page, Animated-HeadLin -->
+        <script src="./assets/js/wow.min.js"></script>
+		<script src="./assets/js/animated.headline.js"></script>
+        <script src="./assets/js/jquery.magnific-popup.js"></script>
+
+        <!-- Breaking New Pluging -->
+        <script src="./assets/js/jquery.ticker.js"></script>
+        <script src="./assets/js/site.js"></script>
+
+		<!-- Scrollup, nice-select, sticky -->
+        <script src="./assets/js/jquery.scrollUp.min.js"></script>
+        <script src="./assets/js/jquery.nice-select.min.js"></script>
+		<script src="./assets/js/jquery.sticky.js"></script>
+        
+        <!-- contact js -->
+        <script src="./assets/js/contact.js"></script>
+        <script src="./assets/js/jquery.form.js"></script>
+        <script src="./assets/js/jquery.validate.min.js"></script>
+        <script src="./assets/js/mail-script.js"></script>
+        <script src="./assets/js/jquery.ajaxchimp.min.js"></script>
+        
+		<!-- Jquery Plugins, main Jquery -->	
+        <script src="./assets/js/plugins.js"></script>
+        <script src="./assets/js/main.js"></script>
+        
+        <!-- Header Date -->
+        <script src="./assets/js/header.date.js"></script>
+        <!-- Weather API-->
+        <script src="./assets/js/weatherapi.js"></script>
+        <script src="./assets/js/include.js"></script>
+        
+    </body>
+</html>
